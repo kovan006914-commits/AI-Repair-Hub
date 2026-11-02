@@ -1,0 +1,19 @@
+package com.airepair.order;
+import org.apache.ibatis.annotations.*; import java.util.List; import java.util.Map;
+@Mapper public interface OrderMapper {
+ @Insert("INSERT INTO repair_order(student_id,building,room,category,description,urgency,status,version) VALUES(#{studentId},#{building},#{room},#{category},#{description},#{urgency},'PENDING_REVIEW',0)") @Options(useGeneratedKeys=true,keyProperty="id") int insert(RepairOrder o);
+ @Select("SELECT * FROM repair_order WHERE id=#{id}") RepairOrder get(long id);
+ @Select("<script>SELECT * FROM repair_order <where><if test='role == &quot;STUDENT&quot;'>student_id=#{userId}</if><if test='role == &quot;TECHNICIAN&quot;'>technician_id=#{userId}</if></where> ORDER BY id DESC LIMIT #{limit} OFFSET #{offset}</script>") List<RepairOrder> list(@Param("role") String role,@Param("userId") long id,@Param("limit") int limit,@Param("offset") int offset);
+ @Select("<script>SELECT COUNT(*) FROM repair_order <where><if test='role == &quot;STUDENT&quot;'>student_id=#{userId}</if><if test='role == &quot;TECHNICIAN&quot;'>technician_id=#{userId}</if></where></script>") long count(@Param("role") String role,@Param("userId") long id);
+ @Update("UPDATE repair_order SET status=#{next}, technician_id=#{technicianId}, result=#{result}, accepted_at=CASE WHEN #{next}='IN_PROGRESS' THEN CURRENT_TIMESTAMP ELSE accepted_at END, completed_at=CASE WHEN #{next}='COMPLETED' THEN CURRENT_TIMESTAMP ELSE completed_at END, version=version+1, updated_at=CURRENT_TIMESTAMP WHERE id=#{id} AND version=#{version} AND status=#{old}") int transition(@Param("id") long id,@Param("version") int version,@Param("old") String old,@Param("next") String next,@Param("technicianId") Long technicianId,@Param("result") String result);
+ @Insert("INSERT INTO repair_order_log(order_id,actor_id,from_status,to_status,action) VALUES(#{orderId},#{actorId},#{fromStatus},#{toStatus},#{action})") int log(@Param("orderId") long orderId,@Param("actorId") long actorId,@Param("fromStatus") String from,@Param("toStatus") String to,@Param("action") String action);
+ @Select("SELECT id,actor_id,from_status,to_status,action,created_at FROM repair_order_log WHERE order_id=#{id} ORDER BY id") List<Map<String,Object>> history(long id);
+ @Insert("INSERT INTO repair_assignment(order_id,technician_id,assigned_by) VALUES(#{orderId},#{tech},#{actor})") int assignment(@Param("orderId") long orderId,@Param("tech") long tech,@Param("actor") long actor);
+ @Update("UPDATE repair_order SET version=version+1,updated_at=CURRENT_TIMESTAMP WHERE id=#{id} AND version=#{version} AND status=#{status}") int touch(@Param("id") long id,@Param("version") int version,@Param("status") String status);
+ @Insert("INSERT INTO repair_feedback(order_id,student_id,rating,comment) VALUES(#{orderId},#{studentId},#{rating},#{comment})") int feedback(@Param("orderId") long orderId,@Param("studentId") long studentId,@Param("rating") int rating,@Param("comment") String comment);
+ @Select("SELECT id,order_id,student_id,rating,comment,created_at FROM repair_feedback WHERE order_id=#{id}") java.util.Map<String,Object> getFeedback(long id);
+ @Insert("INSERT INTO repair_order_image(order_id,uploader_id,storage_key,content_type) VALUES(#{orderId},#{uploaderId},#{storageKey},#{contentType})") @Options(useGeneratedKeys=true,keyProperty="id") int insertImage(OrderImage image);
+ @Select("SELECT * FROM repair_order_image WHERE id=#{id} AND order_id=#{orderId}") OrderImage image(@Param("orderId") long orderId,@Param("id") long id);
+ @Select("SELECT id,order_id,uploader_id,content_type,created_at FROM repair_order_image WHERE order_id=#{id} ORDER BY id") java.util.List<OrderImage> images(long id);
+ @Select("SELECT COUNT(*) FROM repair_order_image WHERE order_id=#{id}") int imageCount(long id);
+}

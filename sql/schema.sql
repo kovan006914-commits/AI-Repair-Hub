@@ -1,0 +1,35 @@
+-- 新建数据库后选中它再执行；本脚本不会删除已有数据。
+CREATE TABLE IF NOT EXISTS sys_user (
+ id BIGINT PRIMARY KEY AUTO_INCREMENT, username VARCHAR(32) NOT NULL UNIQUE, password_hash VARCHAR(100) NOT NULL,
+ role VARCHAR(20) NOT NULL, enabled BOOLEAN NOT NULL DEFAULT TRUE,
+ created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS repair_order (
+ id BIGINT PRIMARY KEY AUTO_INCREMENT, student_id BIGINT NOT NULL, building VARCHAR(100) NOT NULL, room VARCHAR(30) NOT NULL,
+ category VARCHAR(50) NOT NULL, description VARCHAR(2000) NOT NULL, urgency VARCHAR(10) NOT NULL, status VARCHAR(30) NOT NULL,
+ technician_id BIGINT NULL, result VARCHAR(1000), version INT NOT NULL DEFAULT 0,
+ accepted_at TIMESTAMP NULL, completed_at TIMESTAMP NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ FOREIGN KEY(student_id) REFERENCES sys_user(id), FOREIGN KEY(technician_id) REFERENCES sys_user(id),
+ INDEX idx_student_created(student_id, id), INDEX idx_technician_status(technician_id,status), INDEX idx_status(status)
+);
+CREATE TABLE IF NOT EXISTS repair_order_log (
+ id BIGINT PRIMARY KEY AUTO_INCREMENT, order_id BIGINT NOT NULL, actor_id BIGINT NOT NULL, from_status VARCHAR(30), to_status VARCHAR(30) NOT NULL,
+ action VARCHAR(30) NOT NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ FOREIGN KEY(order_id) REFERENCES repair_order(id), FOREIGN KEY(actor_id) REFERENCES sys_user(id), INDEX idx_log_order(order_id,id)
+);
+CREATE TABLE IF NOT EXISTS repair_assignment (
+ id BIGINT PRIMARY KEY AUTO_INCREMENT, order_id BIGINT NOT NULL, technician_id BIGINT NOT NULL, assigned_by BIGINT NOT NULL,
+ created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ FOREIGN KEY(order_id) REFERENCES repair_order(id), FOREIGN KEY(technician_id) REFERENCES sys_user(id), FOREIGN KEY(assigned_by) REFERENCES sys_user(id), INDEX idx_assignment_order(order_id,id)
+);
+CREATE TABLE IF NOT EXISTS repair_feedback (
+ id BIGINT PRIMARY KEY AUTO_INCREMENT, order_id BIGINT NOT NULL UNIQUE, student_id BIGINT NOT NULL,
+ rating INT NOT NULL, comment VARCHAR(500) NOT NULL DEFAULT '', created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ FOREIGN KEY(order_id) REFERENCES repair_order(id), FOREIGN KEY(student_id) REFERENCES sys_user(id)
+);
+CREATE TABLE IF NOT EXISTS repair_order_image (
+ id BIGINT PRIMARY KEY AUTO_INCREMENT, order_id BIGINT NOT NULL, uploader_id BIGINT NOT NULL,
+ storage_key VARCHAR(80) NOT NULL UNIQUE, content_type VARCHAR(20) NOT NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ FOREIGN KEY(order_id) REFERENCES repair_order(id), FOREIGN KEY(uploader_id) REFERENCES sys_user(id), INDEX idx_image_order(order_id,id)
+);
