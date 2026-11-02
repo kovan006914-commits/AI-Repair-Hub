@@ -33,4 +33,27 @@ import com.fasterxml.jackson.databind.*; import org.junit.jupiter.api.Test; impo
   post("/api/orders/"+id+"/feedback","{\"rating\":5}",student,409);
   String response=mvc.perform(get("/api/orders/"+id+"/history").header("Authorization","Bearer "+student)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();assertThat(json.readTree(response).path("data").size()).isEqualTo(8);
  }
+ @Test void dormitoryIsPrivateAndAdminCanReassignInProgressOrder() throws Exception {
+  JsonNode a=register("dormstudent"),b=register("dormother"),t=register("techone"),t2=register("techtwo");
+  String student=a.path("token").asText(),other=b.path("token").asText(),tech=t.path("token").asText(),newTech=t2.path("token").asText();
+  String admin=post("/api/auth/login","{\"username\":\"admin\",\"password\":\"admin-password-123\"}",null,200).path("data").path("token").asText();
+  mvc.perform(put("/api/users/me/dormitory").header("Authorization","Bearer "+student).contentType(MediaType.APPLICATION_JSON).content("{\"building\":\"3号楼\",\"room\":\"302\"}")).andExpect(status().isOk());
+  mvc.perform(put("/api/users/me/dormitory").header("Authorization","Bearer "+student).contentType(MediaType.APPLICATION_JSON).content("{\"building\":\"4号楼\",\"room\":\"401\"}")).andExpect(status().isOk());
+  String d=mvc.perform(get("/api/users/me/dormitory").header("Authorization","Bearer "+student)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+  assertThat(json.readTree(d).path("data").path("room").asText()).isEqualTo("401");
+  String missing=mvc.perform(get("/api/users/me/dormitory").header("Authorization","Bearer "+other)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();assertThat(json.readTree(missing).path("data").isNull()).isTrue();
+  for(long id:new long[]{t.path("id").asLong(),t2.path("id").asLong()}) mvc.perform(put("/api/users/"+id+"/role").header("Authorization","Bearer "+admin).contentType(MediaType.APPLICATION_JSON).content("{\"role\":\"TECHNICIAN\"}")).andExpect(status().isOk());
+  mvc.perform(get("/api/users/me/dormitory").header("Authorization","Bearer "+tech)).andExpect(status().isForbidden());
+  long id=post("/api/orders","{\"building\":\"4号楼\",\"room\":\"401\",\"category\":\"灯具\",\"description\":\"灯不亮\",\"urgency\":\"NORMAL\"}",student,200).path("data").path("id").asLong();
+  post("/api/orders/"+id+"/actions/approve","{}",admin,200);
+  post("/api/orders/"+id+"/actions/assign","{\"technicianId\":"+t.path("id").asLong()+"}",admin,200);
+  post("/api/orders/"+id+"/actions/accept","{}",tech,200);
+  post("/api/orders/"+id+"/actions/reassign","{\"technicianId\":"+t2.path("id").asLong()+"}",tech,403);
+  var reassigned=post("/api/orders/"+id+"/actions/reassign","{\"technicianId\":"+t2.path("id").asLong()+"}",admin,200).path("data");
+  assertThat(reassigned.path("status").asText()).isEqualTo("PENDING_ACCEPTANCE");assertThat(reassigned.path("acceptedAt").isNull()).isTrue();
+  mvc.perform(get("/api/orders/"+id).header("Authorization","Bearer "+tech)).andExpect(status().isForbidden());
+  post("/api/orders/"+id+"/actions/accept","{}",newTech,200);
+  post("/api/orders/"+id+"/actions/finish","{\"result\":\"维修完成\"}",newTech,200);
+  post("/api/orders/"+id+"/actions/confirm","{}",student,200);
+ }
 }

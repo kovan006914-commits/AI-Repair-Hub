@@ -10,6 +10,7 @@ import com.airepair.common.BusinessException; import com.airepair.user.*; import
   switch(action){
    case "approve" -> {require(actor,"ADMIN",o,"PENDING_REVIEW");next="PENDING_ASSIGNMENT";}
    case "assign" -> {require(actor,"ADMIN",o,"PENDING_ASSIGNMENT");if(technicianId==null)throw BusinessException.bad("请选择维修人员");User t=users.byId(technicianId);if(t==null||!t.enabled||!t.role.equals("TECHNICIAN"))throw BusinessException.bad("维修人员不存在或不可用");o.technicianId=technicianId;next="PENDING_ACCEPTANCE";}
+   case "reassign" -> {if(!actor.role.equals("ADMIN"))throw BusinessException.forbidden();if(!o.status.equals("PENDING_ACCEPTANCE")&&!o.status.equals("IN_PROGRESS"))throw BusinessException.conflict();if(technicianId==null)throw BusinessException.bad("请选择维修人员");User t=users.byId(technicianId);if(t==null||!t.enabled||!t.role.equals("TECHNICIAN"))throw BusinessException.bad("维修人员不存在或不可用");if(technicianId.equals(o.technicianId))throw BusinessException.bad("请选择其他维修人员");o.technicianId=technicianId;next="PENDING_ACCEPTANCE";}
    case "accept" -> {require(actor,"TECHNICIAN",o,"PENDING_ACCEPTANCE");next="IN_PROGRESS";}
    case "finish" -> {require(actor,"TECHNICIAN",o,"IN_PROGRESS");if(result==null||result.isBlank()||result.length()>1000)throw BusinessException.bad("维修结果须为1到1000字");o.result=result;next="PENDING_CONFIRMATION";}
    case "confirm" -> {require(actor,"STUDENT",o,"PENDING_CONFIRMATION");next="COMPLETED";}
@@ -17,7 +18,7 @@ import com.airepair.common.BusinessException; import com.airepair.user.*; import
    default -> throw BusinessException.bad("未知操作");
   }
   if(orders.transition(id,o.version,o.status,next,o.technicianId,o.result)!=1)throw BusinessException.conflict();
-  if(action.equals("assign"))orders.assignment(id,o.technicianId,actor.id);
+  if(action.equals("assign")||action.equals("reassign"))orders.assignment(id,o.technicianId,actor.id);
   orders.log(id,actor.id,o.status,next,action.toUpperCase());return orders.get(id);
  }
  @Transactional public void feedback(User actor,long id,int rating,String comment){RepairOrder o=get(actor,id);require(actor,"STUDENT",o,"COMPLETED");if(orders.touch(o.id,o.version,o.status)!=1)throw BusinessException.conflict();orders.feedback(id,actor.id,rating,comment==null?"":comment);orders.log(id,actor.id,o.status,o.status,"FEEDBACK");}

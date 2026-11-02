@@ -33,3 +33,10 @@ CREATE TABLE IF NOT EXISTS repair_order_image (
  storage_key VARCHAR(80) NOT NULL UNIQUE, content_type VARCHAR(20) NOT NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
  FOREIGN KEY(order_id) REFERENCES repair_order(id), FOREIGN KEY(uploader_id) REFERENCES sys_user(id), INDEX idx_image_order(order_id,id)
 );
+-- 学生当前宿舍资料；工单保存提交时的地址快照。
+CREATE TABLE IF NOT EXISTS dormitory (
+ user_id BIGINT PRIMARY KEY, building VARCHAR(100) NOT NULL, room VARCHAR(30) NOT NULL,
+ created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ FOREIGN KEY(user_id) REFERENCES sys_user(id)
+);

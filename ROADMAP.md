@@ -11,11 +11,12 @@
 - [x] H2 环境下的流程/权限/并发测试代码
 - [ ] 在 Java 21 和真实 MySQL 8 环境验证启动、SQL 约束、并发和完整浏览器流程
 - [x] 单次维修评价、图片上传与基于工单归属的访问控制
-- [ ] 用户资料与宿舍管理、异常工单处理
+- [x] 学生宿舍信息保存和报修表单自动填充；管理员重新派单
+- [ ] 完善用户资料管理及其他异常工单处理
 - [ ] 运行环境安全加固：登录限流、令牌吊销、密码重置、审计、HTTPS 和生产部署配置
 - [ ] 真正的 MySQL 集成测试和跨浏览器测试
 
-目前数据模型包括实际使用的 sys_user、repair_order、repair_order_log、repair_assignment、repair_feedback、repair_order_image 六表；其余表应在相应功能开发时根据业务需要设计并迁移，不应宣称已实现。
+目前数据模型包括实际使用的 sys_user、repair_order、repair_order_log、repair_assignment、repair_feedback、repair_order_image、dormitory 七表；其余表应在相应功能开发时根据业务需要设计并迁移，不应宣称已实现。
 
 ## 第二阶段：AI 客服
 
