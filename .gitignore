@@ -7,3 +7,7 @@
 *.log
 **/*.tsbuildinfo
 **/uploads/
+
+# Local runtime credentials and development state
+.local/
+**/local-config.clixml

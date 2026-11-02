@@ -40,6 +40,37 @@ Java 21、Spring Boot 3.5.7、Spring Security、JWT、MyBatis-Plus 3.5.18、MySQ
 
    按终端输出打开本地地址（通常为 `http://localhost:5173`）。开发服务器将 `/api` 代理到 `http://localhost:8080`。Swagger 地址：`http://localhost:8080/swagger-ui/index.html`。生产部署需要另行设置同源反向代理和 HTTPS。
 
+## Windows 辅助启动脚本
+
+完成 JDK 21、Maven 3.9+、MySQL 8 和 Node.js 安装后，可在仓库根目录执行：
+
+```powershell
+# JAVA_HOME 应指向 JDK 21；mysql.exe、mvn.cmd 和 npm.cmd 应在 PATH 中。
+Push-Location backend
+mvn verify
+Pop-Location
+npm.cmd --prefix frontend ci
+npm.cmd --prefix frontend run build
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Start-Local.ps1
+```
+
+如果工具不在 PATH 中，可传入 `-JavaHome '你的 JDK 21 目录'` 和 `-MySqlExe '你的 mysql.exe 完整路径'`。脚本固定使用本机 MySQL 的 3306 端口；8080 和 5173 端口须空闲。前后端仅监听本机回环地址。
+
+首次运行时在本机窗口输入 MySQL 用户名（默认 `root`）、数据库密码和网页 `admin` 的密码。数据库账号需具有建库、建表、创建用户和授予权限的权限。脚本执行 `sql/schema.sql`，生成随机 JWT 密钥，并为应用创建仅有 `ai_repair_hub.*` 的 `SELECT`、`INSERT`、`UPDATE`、`DELETE` 权限的随机账号。已有管理员密码不会被重置。
+
+配置和日志默认保存在仓库同级的 `<仓库目录名>.local` 目录，可用 `-RuntimeDirectory '本机配置目录'` 指定。密码和密钥通过 Windows DPAPI 加密，仅能由原 Windows 用户在原电脑上读取；MySQL 管理账号的密码不会保存。再次运行会复用该配置。不要将本地配置、日志、数据库备份或上传文件提交到 Git。
+
+脚本显示 `READY` 后，访问 `http://localhost:5173`；接口文档为 `http://localhost:8080/swagger-ui/index.html`。服务在后台运行，关闭配置窗口不会停止服务。再次启动前需先停止旧服务，或在重启电脑后运行脚本。此脚本用于本机开发体验。
+
+### 2026-11-02 本地启动验证
+
+- 使用 JDK 21.0.9、Maven 3.9.9 执行 `mvn verify`，现有 2 项 H2 集成测试通过，后端打包成功。
+- 执行 `npm ci` 和 `npm run build`，前端构建通过。
+- 在真实 MySQL 8 上执行建库及初始化脚本，确认 7 张表、`utf8mb4_unicode_ci` 排序规则及应用账号的限定权限。
+- HTTP 验证管理员登录、管理员身份、经 Vite 代理查询工单、匿名查询工单返回 401，以及 Swagger / OpenAPI 可访问。
+
+以上记录不代表浏览器完整操作流程或真实 MySQL 并发行为已通过端到端验证。
+
 ## 体验流程
 
 1. 在登录页注册学生 A，再注册另一个账号作为维修人员候选。公开注册始终是学生，不接受自选角色。学生可保存自己的宿舍信息，后续报修时会自动填入；修改宿舍信息不会改变历史工单的地址。
